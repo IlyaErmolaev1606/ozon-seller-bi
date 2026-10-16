@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ozon Seller BI — демо</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --pos: #2a78d6; --neg: #e34948; --nominal: #86b6ef; --effective: #184f95;
+  --good: #006300; --bad: #d03b3b; --warn-bg: #fff4d6; --bad-bg: #fde8e8; --ok-bg: #e6f4e6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --pos: #3987e5; --neg: #e66767; --nominal: #1c5cab; --effective: #9ec5f4;
+    --good: #0ca30c; --bad: #e66767; --warn-bg: #3a3214; --bad-bg: #3a1c1c; --ok-bg: #16301a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --pos: #3987e5; --neg: #e66767; --nominal: #1c5cab; --effective: #9ec5f4;
+  --good: #0ca30c; --bad: #e66767; --warn-bg: #3a3214; --bad-bg: #3a1c1c; --ok-bg: #16301a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+header h1 { font-size: 24px; margin: 0 0 4px; font-weight: 650; }
+header p { margin: 0; color: var(--ink2); }
+.note { margin-top: 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--ink2); font-size: 14px; }
+section { margin-top: 28px; }
+h2 { font-size: 18px; margin: 0 0 4px; font-weight: 650; }
+.sub { color: var(--ink2); margin: 0 0 12px; font-size: 14px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+.kpis { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); gap: 12px; margin-top: 20px; }
+@media (max-width: 860px) { .kpis { grid-template-columns: 1fr 1fr; } .tile.hero { grid-column: 1 / -1; } }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.tl { color: var(--ink2); font-size: 13px; }
+.tv { font-size: 26px; font-weight: 650; margin-top: 2px; }
+.hero .tv { font-size: 44px; line-height: 1.1; white-space: nowrap; }
+.ts { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.delta.good { color: var(--good); } .delta.bad { color: var(--bad); }
+.headline { margin: 16px 0 0; padding: 12px 16px 12px 34px; border-left: 3px solid var(--neg); background: var(--surface);
+  border-radius: 0 10px 10px 0; }
+.headline li { margin: 2px 0; }
+.chart { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: var(--grid); stroke-width: 1; }
+.chart .axis { stroke: var(--axis); stroke-width: 1; }
+.chart .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .lbl { fill: var(--ink2); font-size: 12px; }
+.chart .val { fill: var(--ink); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart .pos { fill: var(--pos); } .chart .neg { fill: var(--neg); }
+.chart .connector { stroke: var(--axis); stroke-width: 2; }
+.chart .dot-nominal { fill: var(--nominal); stroke: var(--surface); stroke-width: 2; }
+.chart .dot-effective { fill: var(--effective); stroke: var(--surface); stroke-width: 2; }
+.chart .hitbox { fill: transparent; }
+.chart .hit:hover .hitbox { fill: var(--grid); opacity: .45; }
+.legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink2); margin: 0 0 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { padding: 7px 8px; border-bottom: 1px solid var(--grid); text-align: left; vertical-align: top; }
+th { color: var(--ink2); font-weight: 600; white-space: nowrap; }
+table.sku td:nth-child(2) { min-width: 190px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12.5px; white-space: nowrap; }
+.badge.ok { background: var(--ok-bg); color: var(--good); }
+.badge.warn { background: var(--warn-bg); color: var(--ink); }
+.badge.bad { background: var(--bad-bg); color: var(--bad); }
+#tip { position: fixed; pointer-events: none; z-index: 10; max-width: 320px; padding: 8px 10px; border-radius: 8px;
+  background: var(--ink); color: var(--surface); font-size: 12.5px; opacity: 0; transition: opacity .08s; }
+footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+</style></head>
+<body><main>
+<header>
+  <h1>Ozon Seller BI — юнит-экономика, сверки, запасы</h1>
+  <p>Прототип единого дашборда: от Seller API до решений собственника и финдиректора.</p>
+  <div class="note"><b>Данные синтетические.</b> Товары, цены и события сгенерированы скриптом
+  <code>osbi.demo_data</code> и не относятся ни к одной компании. В данные заложены типовые ситуации
+  (OOS второй карточки, отключённые скидки, утрата на складе, расхождения отчётов), которые витрины находят сами.</div>
+</header>
+
+
+    <div class="kpis">
+      <div class="tile hero"><div class="tl">Вклад в прибыль, 2026-09</div>
+        <div class="tv">2,69 млн ₽</div>
+        <div class="ts">маржа 19,2% · <span class="delta good">▲ 36,4% к пред. месяцу</span></div></div>
+      <div class="tile"><div class="tl">Выручка (цена реализации)</div><div class="tv">14,0 млн ₽</div>
+        <div class="ts">4 848 шт. · <span class="delta good">▲ 4,2% к пред. месяцу</span></div></div>
+      <div class="tile"><div class="tl">Удержания Ozon фактически</div><div class="tv">15,8%</div>
+        <div class="ts">номинально 113% выручки — разницу закрыли баллы</div></div>
+      <div class="tile"><div class="tl">ДРР</div><div class="tv">8,4%</div>
+        <div class="ts">реклама 1,2 млн ₽</div></div>
+      <div class="tile"><div class="tl">К претензиям Ozon</div><div class="tv">256 тыс. ₽</div>
+        <div class="ts">утраты без возмещения + недостачи приёмки</div></div>
+    </div>
+<ul class="headline"><li>SC-04 теряет 327 тыс. ₽ в месяц (скидки Ozon отключены — тариф по номиналу)</li><li>SC-03 теряет 40 тыс. ₽ в месяц (баллы покрывают малую часть тарифа)</li></ul>
+
+<section>
+  <h2>Сколько на самом деле зарабатывает каждый артикул</h2>
+  <p class="sub">Вклад в прибыль за 2026-09: выручка − все удержания Ozon (после баллов) − реклама − себестоимость −
+  брак и утраты − фулфилмент − налоги. Наведите на строку.</p>
+  <div class="grid2">
+    <div class="card"><svg viewBox="0 0 520 360" class="chart" role="img" aria-label="Вклад в прибыль по SKU"><line x1="226.7" y1="6" x2="226.7" y2="338" class="grid"/><text x="226.7" y="354" class="tick" text-anchor="middle">0 ₽</text><line x1="356.2" y1="6" x2="356.2" y2="338" class="grid"/><text x="356.2" y="354" class="tick" text-anchor="middle">500 тыс. ₽</text><line x1="226.7" y1="6" x2="226.7" y2="338" class="axis"/><g class="hit" data-tip="TV-01 Смарт-ТВ приставка 4/32 ГБ: вклад 832 тыс. ₽, маржа 42,1%, выручка 2,0 млн ₽, продано 968 шт."><rect x="0" y="2" width="520" height="30" class="hitbox"/><path d="M226.7,8 H438.0 Q442.0,8 442.0,12 V20 Q442.0,24 438.0,24 H226.7 Z" class="pos"/><text x="4" y="20" class="lbl" text-anchor="start">TV-01</text><text x="448.0" y="20" class="val" text-anchor="start">832 тыс. ₽</text></g><g class="hit" data-tip="SC-01-A Пароочиститель 2500 Вт (карточка A): вклад 784 тыс. ₽, маржа 31,2%, выручка 2,5 млн ₽, продано 918 шт."><rect x="0" y="32" width="520" height="30" class="hitbox"/><path d="M226.7,38 H425.8 Q429.8,38 429.8,42 V50 Q429.8,54 425.8,54 H226.7 Z" class="pos"/><text x="4" y="50" class="lbl" text-anchor="start">SC-01-A</text><text x="435.8" y="50" class="val" text-anchor="start">784 тыс. ₽</text></g><g class="hit" data-tip="WV-01 Моющий пылесос 5500 Вт: вклад 538 тыс. ₽, маржа 27,2%, выручка 2,0 млн ₽, продано 480 шт."><rect x="0" y="62" width="520" height="30" class="hitbox"/><path d="M226.7,68 H361.9 Q365.9,68 365.9,72 V80 Q365.9,84 361.9,84 H226.7 Z" class="pos"/><text x="4" y="80" class="lbl" text-anchor="start">WV-01</text><text x="371.9" y="80" class="val" text-anchor="start">538 тыс. ₽</text></g><g class="hit" data-tip="TV-02 Смарт-ТВ приставка 8/128 ГБ: вклад 326 тыс. ₽, маржа 31,1%, выручка 1,1 млн ₽, продано 311 шт."><rect x="0" y="92" width="520" height="30" class="hitbox"/><path d="M226.7,98 H307.2 Q311.2,98 311.2,102 V110 Q311.2,114 307.2,114 H226.7 Z" class="pos"/><text x="4" y="110" class="lbl" text-anchor="start">TV-02</text><text x="317.2" y="110" class="val" text-anchor="start">326 тыс. ₽</text></g><g class="hit" data-tip="WV-02 Моющий пылесос компактный: вклад 184 тыс. ₽, маржа 15,7%, выручка 1,2 млн ₽, продано 358 шт."><rect x="0" y="122" width="520" height="30" class="hitbox"/><path d="M226.7,128 H270.3 Q274.3,128 274.3,132 V140 Q274.3,144 270.3,144 H226.7 Z" class="pos"/><text x="4" y="140" class="lbl" text-anchor="start">WV-02</text><text x="280.3" y="140" class="val" text-anchor="start">184 тыс. ₽</text></g><g class="hit" data-tip="SC-02 Пароочиститель 1500 Вт компактный: вклад 167 тыс. ₽, маржа 11,7%, выручка 1,4 млн ₽, продано 633 шт."><rect x="0" y="152" width="520" height="30" class="hitbox"/><path d="M226.7,158 H265.8 Q269.8,158 269.8,162 V170 Q269.8,174 265.8,174 H226.7 Z" class="pos"/><text x="4" y="170" class="lbl" text-anchor="start">SC-02</text><text x="275.8" y="170" class="val" text-anchor="start">167 тыс. ₽</text></g><g class="hit" data-tip="BL-02 Воздуходувка аккум. компактная: вклад 119 тыс. ₽, маржа 32,2%, выручка 369 тыс. ₽, продано 235 шт."><rect x="0" y="182" width="520" height="30" class="hitbox"/><path d="M226.7,188 H253.5 Q257.5,188 257.5,192 V200 Q257.5,204 253.5,204 H226.7 Z" class="pos"/><text x="4" y="200" class="lbl" text-anchor="start">BL-02</text><text x="263.5" y="200" class="val" text-anchor="start">119 тыс. ₽</text></g><g class="hit" data-tip="BL-01 Воздуходувка аккум. 48В + 2 АКБ: вклад 64 тыс. ₽, маржа 13,0%, выручка 490 тыс. ₽, продано 209 шт."><rect x="0" y="212" width="520" height="30" class="hitbox"/><path d="M226.7,218 H239.2 Q243.2,218 243.2,222 V230 Q243.2,234 239.2,234 H226.7 Z" class="pos"/><text x="4" y="230" class="lbl" text-anchor="start">BL-01</text><text x="249.2" y="230" class="val" text-anchor="start">64 тыс. ₽</text></g><g class="hit" data-tip="TR-01 Триммер аккум. садовый: вклад 49 тыс. ₽, маржа 16,8%, выручка 291 тыс. ₽, продано 130 шт."><rect x="0" y="242" width="520" height="30" class="hitbox"/><path d="M226.7,248 H235.4 Q239.4,248 239.4,252 V260 Q239.4,264 235.4,264 H226.7 Z" class="pos"/><text x="4" y="260" class="lbl" text-anchor="start">TR-01</text><text x="245.4" y="260" class="val" text-anchor="start">49 тыс. ₽</text></g><g class="hit" data-tip="SC-03 Пароочиститель 3000 Вт с бойлером: вклад −40 тыс. ₽, маржа −3,1%, выручка 1,3 млн ₽, продано 107 шт."><rect x="0" y="272" width="520" height="30" class="hitbox"/><path d="M226.7,278 H220.3 Q216.3,278 216.3,282 V290 Q216.3,294 220.3,294 H226.7 Z" class="neg"/><text x="4" y="290" class="lbl" text-anchor="start">SC-03</text><text x="210.3" y="290" class="val" text-anchor="end">−40 тыс. ₽</text></g><g class="hit" data-tip="SC-04 Пароочиститель ручной 1200 Вт: вклад −327 тыс. ₽, маржа −22,3%, выручка 1,5 млн ₽, продано 499 шт."><rect x="0" y="302" width="520" height="30" class="hitbox"/><path d="M226.7,308 H146.0 Q142.0,308 142.0,312 V320 Q142.0,324 146.0,324 H226.7 Z" class="neg"/><text x="4" y="320" class="lbl" text-anchor="start">SC-04</text><text x="136.0" y="320" class="val" text-anchor="end">−327 тыс. ₽</text></g></svg></div>
+    <div class="card">
+      <div class="legend"><span><i style="background:var(--nominal)"></i>Номинальный тариф и услуги</span>
+      <span><i style="background:var(--effective)"></i>После зачёта баллов</span></div>
+      <svg viewBox="0 0 520 360" class="chart" role="img" aria-label="Доля удержаний Ozon до и после баллов"><line x1="72.0" y1="6" x2="72.0" y2="338" class="grid"/><text x="72.0" y="354" class="tick" text-anchor="middle">0%</text><line x1="160.6" y1="6" x2="160.6" y2="338" class="grid"/><text x="160.6" y="354" class="tick" text-anchor="middle">50%</text><line x1="249.2" y1="6" x2="249.2" y2="338" class="grid"/><text x="249.2" y="354" class="tick" text-anchor="middle">100%</text><line x1="337.8" y1="6" x2="337.8" y2="338" class="grid"/><text x="337.8" y="354" class="tick" text-anchor="middle">150%</text><line x1="426.4" y1="6" x2="426.4" y2="338" class="grid"/><text x="426.4" y="354" class="tick" text-anchor="middle">200%</text><g class="hit" data-tip="BL-01: номинально 227,9% выручки, после баллов 4,7%; баллов зачтено 1,1 млн ₽, не использовано 444 тыс. ₽"><rect x="0" y="2" width="520" height="30" class="hitbox"/><line x1="80.3" y1="16" x2="475.8" y2="16" class="connector"/><circle cx="475.8" cy="16" r="5" class="dot-nominal"/><circle cx="80.3" cy="16" r="5" class="dot-effective"/><text x="4" y="20" class="lbl" text-anchor="start">BL-01</text></g><g class="hit" data-tip="TR-01: номинально 215,5% выручки, после баллов 5,2%; баллов зачтено 612 тыс. ₽, не использовано 216 тыс. ₽"><rect x="0" y="32" width="520" height="30" class="hitbox"/><line x1="81.2" y1="46" x2="453.8" y2="46" class="connector"/><circle cx="453.8" cy="46" r="5" class="dot-nominal"/><circle cx="81.2" cy="46" r="5" class="dot-effective"/><text x="4" y="50" class="lbl" text-anchor="start">TR-01</text></g><g class="hit" data-tip="BL-02: номинально 195,6% выручки, после баллов 4,1%; баллов зачтено 706 тыс. ₽, не использовано 227 тыс. ₽"><rect x="0" y="62" width="520" height="30" class="hitbox"/><line x1="79.3" y1="76" x2="418.5" y2="76" class="connector"/><circle cx="418.5" cy="76" r="5" class="dot-nominal"/><circle cx="79.3" cy="76" r="5" class="dot-effective"/><text x="4" y="80" class="lbl" text-anchor="start">BL-02</text></g><g class="hit" data-tip="SC-01-A: номинально 127,8% выручки, после баллов 2,8%; баллов зачтено 3,1 млн ₽, не использовано 77 тыс. ₽"><rect x="0" y="92" width="520" height="30" class="hitbox"/><line x1="76.9" y1="106" x2="298.4" y2="106" class="connector"/><circle cx="298.4" cy="106" r="5" class="dot-nominal"/><circle cx="76.9" cy="106" r="5" class="dot-effective"/><text x="4" y="110" class="lbl" text-anchor="start">SC-01-A</text></g><g class="hit" data-tip="TV-01: номинально 118,6% выручки, после баллов 2,7%; баллов зачтено 2,3 млн ₽, не использовано 439 тыс. ₽"><rect x="0" y="122" width="520" height="30" class="hitbox"/><line x1="76.7" y1="136" x2="282.1" y2="136" class="connector"/><circle cx="282.1" cy="136" r="5" class="dot-nominal"/><circle cx="76.7" cy="136" r="5" class="dot-effective"/><text x="4" y="140" class="lbl" text-anchor="start">TV-01</text></g><g class="hit" data-tip="WV-01: номинально 115,4% выручки, после баллов 6,1%; баллов зачтено 2,2 млн ₽, не использовано 0 ₽"><rect x="0" y="152" width="520" height="30" class="hitbox"/><line x1="82.9" y1="166" x2="276.6" y2="166" class="connector"/><circle cx="276.6" cy="166" r="5" class="dot-nominal"/><circle cx="82.9" cy="166" r="5" class="dot-effective"/><text x="4" y="170" class="lbl" text-anchor="start">WV-01</text></g><g class="hit" data-tip="WV-02: номинально 108,7% выручки, после баллов 14,3%; баллов зачтено 1,1 млн ₽, не использовано 0 ₽"><rect x="0" y="182" width="520" height="30" class="hitbox"/><line x1="97.3" y1="196" x2="264.7" y2="196" class="connector"/><circle cx="264.7" cy="196" r="5" class="dot-nominal"/><circle cx="97.3" cy="196" r="5" class="dot-effective"/><text x="4" y="200" class="lbl" text-anchor="start">WV-02</text></g><g class="hit" data-tip="TV-02: номинально 105,4% выручки, после баллов 2,7%; баллов зачтено 1,1 млн ₽, не использовано 122 тыс. ₽"><rect x="0" y="212" width="520" height="30" class="hitbox"/><line x1="76.8" y1="226" x2="258.7" y2="226" class="connector"/><circle cx="258.7" cy="226" r="5" class="dot-nominal"/><circle cx="76.8" cy="226" r="5" class="dot-effective"/><text x="4" y="230" class="lbl" text-anchor="start">TV-02</text></g><g class="hit" data-tip="SC-02: номинально 98,8% выручки, после баллов 23,8%; баллов зачтено 1,1 млн ₽, не использовано 0 ₽"><rect x="0" y="242" width="520" height="30" class="hitbox"/><line x1="114.2" y1="256" x2="247.1" y2="256" class="connector"/><circle cx="247.1" cy="256" r="5" class="dot-nominal"/><circle cx="114.2" cy="256" r="5" class="dot-effective"/><text x="4" y="260" class="lbl" text-anchor="start">SC-02</text></g><g class="hit" data-tip="SC-03: номинально 70,8% выручки, после баллов 41,8%; баллов зачтено 378 тыс. ₽, не использовано 0 ₽"><rect x="0" y="272" width="520" height="30" class="hitbox"/><line x1="146.0" y1="286" x2="197.5" y2="286" class="connector"/><circle cx="197.5" cy="286" r="5" class="dot-nominal"/><circle cx="146.0" cy="286" r="5" class="dot-effective"/><text x="4" y="290" class="lbl" text-anchor="start">SC-03</text></g><g class="hit" data-tip="SC-04: номинально 57,6% выручки, после баллов 57,6%; баллов зачтено 0 ₽, не использовано 0 ₽"><rect x="0" y="302" width="520" height="30" class="hitbox"/><line x1="174.1" y1="316" x2="174.1" y2="316" class="connector"/><circle cx="174.1" cy="316" r="5" class="dot-nominal"/><circle cx="174.1" cy="316" r="5" class="dot-effective"/><text x="4" y="320" class="lbl" text-anchor="start">SC-04</text></g></svg>
+      <p class="sub" style="margin-top:8px">Номинальные удержания считаются от цены продавца и часто превышают выручку;
+      баллы за скидки Ozon гасят до 99% услуг. Где точки совпадают — баллов нет.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="tablewrap"><table class="sku"><thead><tr><th class="">Артикул</th><th class="">Товар</th><th class="num">Шт.</th><th class="num">Выручка</th><th class="num">Удерж. номинал</th><th class="num">Удерж. факт</th><th class="num">ДРР</th><th class="num">Возвраты</th><th class="num">Вклад</th><th class="num">Маржа</th><th class="">ABC</th><th class="">XYZ</th></tr></thead><tbody><tr><td>TV-01</td><td>Смарт-ТВ приставка 4/32 ГБ</td><td class="num">968</td><td class="num">2,0 млн ₽</td><td class="num">118,6%</td><td class="num">2,7%</td><td class="num">5,5%</td><td class="num">2,8%</td><td class="num">832 тыс. ₽</td><td class="num">42,1%</td><td>A</td><td>X</td></tr><tr><td>SC-01-A</td><td>Пароочиститель 2500 Вт (карточка A)</td><td class="num">918</td><td class="num">2,5 млн ₽</td><td class="num">127,8%</td><td class="num">2,8%</td><td class="num">6,8%</td><td class="num">4,0%</td><td class="num">784 тыс. ₽</td><td class="num">31,2%</td><td>A</td><td>X</td></tr><tr><td>WV-01</td><td>Моющий пылесос 5500 Вт</td><td class="num">480</td><td class="num">2,0 млн ₽</td><td class="num">115,4%</td><td class="num">6,1%</td><td class="num">8,0%</td><td class="num">4,4%</td><td class="num">538 тыс. ₽</td><td class="num">27,2%</td><td>A</td><td>X</td></tr><tr><td>TV-02</td><td>Смарт-ТВ приставка 8/128 ГБ</td><td class="num">311</td><td class="num">1,1 млн ₽</td><td class="num">105,4%</td><td class="num">2,7%</td><td class="num">9,6%</td><td class="num">3,5%</td><td class="num">326 тыс. ₽</td><td class="num">31,1%</td><td>B</td><td>X</td></tr><tr><td>WV-02</td><td>Моющий пылесос компактный</td><td class="num">358</td><td class="num">1,2 млн ₽</td><td class="num">108,7%</td><td class="num">14,3%</td><td class="num">12,3%</td><td class="num">9,5%</td><td class="num">184 тыс. ₽</td><td class="num">15,7%</td><td>C</td><td>X</td></tr><tr><td>SC-02</td><td>Пароочиститель 1500 Вт компактный</td><td class="num">633</td><td class="num">1,4 млн ₽</td><td class="num">98,8%</td><td class="num">23,8%</td><td class="num">10,1%</td><td class="num">6,6%</td><td class="num">167 тыс. ₽</td><td class="num">11,7%</td><td>B</td><td>X</td></tr><tr><td>BL-02</td><td>Воздуходувка аккум. компактная</td><td class="num">235</td><td class="num">369 тыс. ₽</td><td class="num">195,6%</td><td class="num">4,1%</td><td class="num">6,9%</td><td class="num">7,7%</td><td class="num">119 тыс. ₽</td><td class="num">32,2%</td><td>A</td><td>Y</td></tr><tr><td>BL-01</td><td>Воздуходувка аккум. 48В + 2 АКБ</td><td class="num">209</td><td class="num">490 тыс. ₽</td><td class="num">227,9%</td><td class="num">4,7%</td><td class="num">8,3%</td><td class="num">19,1%</td><td class="num">64 тыс. ₽</td><td class="num">13,0%</td><td>B</td><td>Y</td></tr><tr><td>TR-01</td><td>Триммер аккум. садовый</td><td class="num">130</td><td class="num">291 тыс. ₽</td><td class="num">215,5%</td><td class="num">5,2%</td><td class="num">8,1%</td><td class="num">13,8%</td><td class="num">49 тыс. ₽</td><td class="num">16,8%</td><td>C</td><td>Y</td></tr><tr><td>SC-03</td><td>Пароочиститель 3000 Вт с бойлером</td><td class="num">107</td><td class="num">1,3 млн ₽</td><td class="num">70,8%</td><td class="num">41,8%</td><td class="num">7,7%</td><td class="num">1,9%</td><td class="num">−40 тыс. ₽</td><td class="num">−3,1%</td><td>Убыток</td><td>X</td></tr><tr><td>SC-04</td><td>Пароочиститель ручной 1200 Вт</td><td class="num">499</td><td class="num">1,5 млн ₽</td><td class="num">57,6%</td><td class="num">57,6%</td><td class="num">11,4%</td><td class="num">5,2%</td><td class="num">−327 тыс. ₽</td><td class="num">−22,3%</td><td>Убыток</td><td>X</td></tr></tbody></table></div></div>
+</section>
+
+<section>
+  <h2>Где Ozon удерживает лишнее и где теряются деньги</h2>
+  <p class="sub">Автоматические сверки: остатки по движениям, приёмка поставок, отчёт о реализации против API, упущенные продажи.</p>
+  <div class="card"><div class="tablewrap"><table class=""><thead><tr><th class="">Находка</th><th class="">Где</th><th class="num">Сумма</th><th class="">Действие</th></tr></thead><tbody><tr><td>Упущенные продажи: карточка без остатка</td><td>SC-01-B (SC-01), 30 дн.</td><td class="num">678 тыс. ₽</td><td>Поставка на Ozon из остатка ФФ</td></tr><tr><td>Утрата на складе Ozon без возмещения</td><td>Краснодар, 24.08: 9 SKU, 255 шт.</td><td class="num">240 тыс. ₽</td><td>Запросить расчёт возмещения (лимит по формуле Ozon), претензия</td></tr><tr><td>Недостача при приёмке поставки</td><td>SUP-00719, SKU 1001, Казань</td><td class="num">16 тыс. ₽</td><td>Акт расхождений, претензия</td></tr><tr><td>Отчёт о реализации ≠ API</td><td>2026-08, SKU 2001</td><td class="num">9 тыс. ₽</td><td>Сверка по отправлениям, запрос в поддержку</td></tr><tr><td>Отчёт о реализации ≠ API</td><td>2026-09, SKU 1003</td><td class="num">2 тыс. ₽</td><td>Сверка по отправлениям, запрос в поддержку</td></tr></tbody></table></div></div>
+</section>
+
+<section>
+  <h2>Что закупать, что выводить, куда везти</h2>
+  <p class="sub">Решения по закупке — на уровне модели (физического товара), поставки на Ozon — по карточкам и кластерам.
+  Доля локальных продаж в 2026-09: 92,9%.</p>
+  <div class="grid2">
+    <div class="card"><h3 style="margin:0 0 8px;font-size:15px">Закупка и затоваривание</h3><div class="tablewrap"><table class=""><thead><tr><th class="">Модель</th><th class="">Карточки</th><th class="num">Спрос/день</th><th class="num">Запас, дней</th><th class="num">Лишний запас</th><th class="">Действие</th></tr></thead><tbody><tr><td>BL-01</td><td>BL-01</td><td class="num">7,6</td><td class="num">318</td><td class="num">2,2 млн ₽</td><td>Лишние 1497 шт. сверх 120 дн.: стоп закупки, распродажа</td></tr><tr><td>BL-02</td><td>BL-02</td><td class="num">7,7</td><td class="num">360</td><td class="num">1,3 млн ₽</td><td>Лишние 1846 шт. сверх 120 дн.: стоп закупки, распродажа</td></tr><tr><td>TR-01</td><td>TR-01</td><td class="num">5,0</td><td class="num">303</td><td class="num">1,3 млн ₽</td><td>Лишние 922 шт. сверх 120 дн.: стоп закупки, распродажа</td></tr><tr><td>TV-01</td><td>TV-01</td><td class="num">34,4</td><td class="num">48</td><td class="num">0 ₽</td><td>Заказать 1000 шт.</td></tr></tbody></table></div></div>
+    <div class="card"><h3 style="margin:0 0 8px;font-size:15px">Карточки и кластеры</h3><div class="tablewrap"><table class=""><thead><tr><th class="">Карточка</th><th class="num">На Ozon</th><th class="num">Доступно на ФФ</th><th class="">Действие</th></tr></thead><tbody><tr><td>SC-01-B</td><td class="num">0</td><td class="num">181</td><td>Нет на складах Ozon при остатке на ФФ — срочная поставка</td></tr></tbody></table></div>
+      <div style="margin-top:12px"><div class="tablewrap"><table class=""><thead><tr><th class="">Кластер</th><th class="num">Остаток</th><th class="num">Отгрузить</th></tr></thead><tbody><tr><td>Москва</td><td class="num">779</td><td class="num">64</td></tr><tr><td>Екатеринбург</td><td class="num">245</td><td class="num">4</td></tr><tr><td>Санкт-Петербург</td><td class="num">296</td><td class="num">0</td></tr><tr><td>Краснодар</td><td class="num">295</td><td class="num">0</td></tr><tr><td>Новосибирск</td><td class="num">224</td><td class="num">0</td></tr><tr><td>Казань</td><td class="num">273</td><td class="num">0</td></tr></tbody></table></div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Что будет, если площадка поменяет правила</h2>
+  <p class="sub">Изменение прибыли за месяц при текущих объёмах (эластичность спроса не учтена — это оценка эффекта на единицу × объём).
+  Итого: ставка +3 п.п. −458 тыс. ₽; скидка Ozon −10% цены −658 тыс. ₽;
+  баллы гасят 50% услуг −6,3 млн ₽.</p>
+  <div class="card"><div class="tablewrap"><table class=""><thead><tr><th class="">Артикул</th><th class="num">Маржа факт</th><th class="num">Маржа модель</th><th class="num">Ставка +3 п.п.</th><th class="num">Скидка Ozon −10% цены</th><th class="num">Баллы гасят 50%</th></tr></thead><tbody><tr><td>SC-01-A</td><td class="num">31,2%</td><td class="num">29,8%</td><td class="num">−94 тыс. ₽</td><td class="num">−204 тыс. ₽</td><td class="num">−1,6 млн ₽</td></tr><tr><td>SC-02</td><td class="num">11,7%</td><td class="num">11,8%</td><td class="num">−74 тыс. ₽</td><td class="num">31 тыс. ₽</td><td class="num">−373 тыс. ₽</td></tr><tr><td>SC-03</td><td class="num">−3,1%</td><td class="num">−3,0%</td><td class="num">−50 тыс. ₽</td><td class="num">26 тыс. ₽</td><td class="num">0 ₽</td></tr><tr><td>SC-04</td><td class="num">−22,3%</td><td class="num">−22,3%</td><td class="num">−44 тыс. ₽</td><td class="num">−112 тыс. ₽</td><td class="num">0 ₽</td></tr><tr><td>WV-01</td><td class="num">27,2%</td><td class="num">25,1%</td><td class="num">−124 тыс. ₽</td><td class="num">−89 тыс. ₽</td><td class="num">−1,0 млн ₽</td></tr><tr><td>WV-02</td><td class="num">15,7%</td><td class="num">15,8%</td><td class="num">−68 тыс. ₽</td><td class="num">28 тыс. ₽</td><td class="num">−478 тыс. ₽</td></tr><tr><td>BL-01</td><td class="num">13,0%</td><td class="num">13,0%</td><td class="num">−608 ₽</td><td class="num">−39 тыс. ₽</td><td class="num">−541 тыс. ₽</td></tr><tr><td>BL-02</td><td class="num">32,2%</td><td class="num">32,2%</td><td class="num">−391 ₽</td><td class="num">−30 тыс. ₽</td><td class="num">−349 тыс. ₽</td></tr><tr><td>TR-01</td><td class="num">16,8%</td><td class="num">16,8%</td><td class="num">−336 ₽</td><td class="num">−23 тыс. ₽</td><td class="num">−303 тыс. ₽</td></tr><tr><td>TV-01</td><td class="num">42,1%</td><td class="num">42,1%</td><td class="num">−1 тыс. ₽</td><td class="num">−163 тыс. ₽</td><td class="num">−1,1 млн ₽</td></tr><tr><td>TV-02</td><td class="num">31,1%</td><td class="num">31,1%</td><td class="num">−675 ₽</td><td class="num">−82 тыс. ₽</td><td class="num">−533 тыс. ₽</td></tr></tbody></table></div></div>
+</section>
+
+<section>
+  <h2>Можно ли верить цифрам</h2>
+  <p class="sub">Контроль свежести и полноты каждого источника и сверка рекламы: финансы vs Performance API.</p>
+  <div class="grid2">
+    <div class="card"><div class="tablewrap"><table><thead><tr><th>Проверка</th><th>Детали</th><th>Статус</th><th class="num">Сумма</th></tr></thead>
+      <tbody><tr><td>Свежесть: начисления</td><td>2026-09-30</td><td><span class="badge ok"><span aria-hidden="true">✓</span> OK</span></td><td class='num'></td></tr><tr><td>Свежесть: Performance API</td><td>2026-09-30</td><td><span class="badge ok"><span aria-hidden="true">✓</span> OK</span></td><td class='num'></td></tr><tr><td>Свежесть: остатки Ozon</td><td>2026-09-30</td><td><span class="badge ok"><span aria-hidden="true">✓</span> OK</span></td><td class='num'></td></tr><tr><td>Новые типы начислений без маппинга</td><td>999</td><td><span class="badge bad"><span aria-hidden="true">✕</span> Тревога</span></td><td class='num'>−4 тыс. ₽</td></tr><tr><td>Начисления без детализации (только total_amount)</td><td>1 шт.</td><td><span class="badge warn"><span aria-hidden="true">!</span> Проверить</span></td><td class='num'>−3 тыс. ₽</td></tr><tr><td>Выкупленные отправления без начисления выручки</td><td>0 шт.</td><td><span class="badge ok"><span aria-hidden="true">✓</span> OK</span></td><td class='num'></td></tr><tr><td>Дни без данных Performance API при списаниях в финансах</td><td>14.09, 15.09</td><td><span class="badge bad"><span aria-hidden="true">✕</span> Тревога</span></td><td class='num'></td></tr></tbody></table></div></div>
+    <div class="card"><div class="tablewrap"><table><thead><tr><th>Месяц</th><th class="num">Финансы</th><th class="num">Performance API</th>
+      <th class="num">Разница</th><th>Статус</th></tr></thead><tbody><tr><td>2026-06</td><td class='num'>1,0 млн ₽</td><td class='num'>1,0 млн ₽</td><td class='num'>0,0%</td><td><span class="badge ok"><span aria-hidden="true">✓</span> OK</span></td></tr><tr><td>2026-07</td><td class='num'>949 тыс. ₽</td><td class='num'>949 тыс. ₽</td><td class='num'>0,0%</td><td><span class="badge ok"><span aria-hidden="true">✓</span> OK</span></td></tr><tr><td>2026-08</td><td class='num'>1,2 млн ₽</td><td class='num'>1,2 млн ₽</td><td class='num'>0,0%</td><td><span class="badge ok"><span aria-hidden="true">✓</span> OK</span></td></tr><tr><td>2026-09</td><td class='num'>1,2 млн ₽</td><td class='num'>1,2 млн ₽</td><td class='num'>−6,5%</td><td><span class="badge bad"><span aria-hidden="true">✕</span> Расхождение</span></td></tr></tbody></table></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Динамика по месяцам</h2>
+  <div class="card"><div class="tablewrap"><table class=""><thead><tr><th class="">Месяц</th><th class="num">Выручка</th><th class="num">К выплате от Ozon</th><th class="num">Удержания факт</th><th class="num">ДРР</th><th class="num">Вклад в прибыль</th><th class="num">Маржа</th><th class="num">Убыточных SKU</th></tr></thead><tbody><tr><td>2026-06</td><td class="num">11,7 млн ₽</td><td class="num">9,5 млн ₽</td><td class="num">18,2%</td><td class="num">8,7%</td><td class="num">1,8 млн ₽</td><td class="num">15,0%</td><td class="num">2</td></tr><tr><td>2026-07</td><td class="num">12,0 млн ₽</td><td class="num">10,2 млн ₽</td><td class="num">14,8%</td><td class="num">7,9%</td><td class="num">2,3 млн ₽</td><td class="num">19,1%</td><td class="num">2</td></tr><tr><td>2026-08</td><td class="num">13,5 млн ₽</td><td class="num">11,3 млн ₽</td><td class="num">15,7%</td><td class="num">8,9%</td><td class="num">2,0 млн ₽</td><td class="num">14,7%</td><td class="num">3</td></tr><tr><td>2026-09</td><td class="num">14,0 млн ₽</td><td class="num">11,9 млн ₽</td><td class="num">15,8%</td><td class="num">8,4%</td><td class="num">2,7 млн ₽</td><td class="num">19,2%</td><td class="num">2</td></tr></tbody></table></div></div>
+</section>
+
+<footer>Собрано из витрин DuckDB · модель и допущения — в docs/ репозитория.</footer>
+</main>
+<div id="tip" role="tooltip"></div>
+<script>
+(() => {
+  const tip = document.getElementById('tip');
+  document.querySelectorAll('.hit').forEach(g => {
+    g.addEventListener('mousemove', e => {
+      tip.textContent = g.dataset.tip; tip.style.opacity = 1;
+      const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+      tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+    });
+    g.addEventListener('mouseleave', () => tip.style.opacity = 0);
+  });
+})();
+</script>
+</body></html>
