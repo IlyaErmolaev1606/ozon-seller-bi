@@ -338,7 +338,8 @@ h2 {{ font-size: 18px; margin: 0 0 4px; font-weight: 650; }}
 @media (max-width: 860px) {{ .kpis {{ grid-template-columns: 1fr 1fr; }} .tile.hero {{ grid-column: 1 / -1; }} }}
 .tile {{ background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }}
 .tl {{ color: var(--ink2); font-size: 13px; }}
-.tv {{ font-size: 26px; font-weight: 650; margin-top: 2px; }}
+.tv {{ font-size: 26px; font-weight: 650; margin-top: 2px; white-space: nowrap; }}
+@media (max-width: 480px) {{ .tv {{ font-size: 21px; }} }}
 .hero .tv {{ font-size: 44px; line-height: 1.1; white-space: nowrap; }}
 .ts {{ color: var(--muted); font-size: 13px; margin-top: 4px; }}
 .delta.good {{ color: var(--good); }} .delta.bad {{ color: var(--bad); }}
