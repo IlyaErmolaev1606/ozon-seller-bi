@@ -11,3 +11,4 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: PYTHONPATH=src python -m pytest -q
       - run: PYTHONPATH=src python -m osbi.build --demo
+      - run: PYTHONPATH=src python -m osbi.export_datalens
