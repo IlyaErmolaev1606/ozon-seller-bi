@@ -9,8 +9,8 @@ Seller API до витрин, по которым собственник и фи
 
 ![Дашборд на синтетических данных](docs/img/dashboard.png)
 
-Тот же дашборд собирается в Yandex DataLens из выгрузки витрин в CSV — инструкция и проверочные
-цифры в [docs/08](docs/08_datalens.md).
+Тот же дашборд собран в Yandex DataLens из выгрузки витрин в CSV: [открыть дашборд](https://datalens.yandex/5cajhqt3ldlco?_share_link=public)
+(без входа). Инструкция по сборке и проверочные цифры — в [docs/08](docs/08_datalens.md).
 
 ## Пять идей, на которых всё держится
 
