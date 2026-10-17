@@ -162,6 +162,43 @@ def status_badge(s: str) -> str:
     return f'<span class="badge {kind}"><span aria-hidden="true">{icon}</span> {esc(s)}</span>'
 
 
+# ---------- находки ----------
+def money_findings(con: duckdb.DuckDBPyConnection) -> tuple[pd.DataFrame, float]:
+    """Где теряются деньги — в рублях. Общий источник для HTML-дашборда и выгрузки в DataLens.
+
+    Возвращает таблицу находок (Тип, Что, Где, rub, Действие) и сумму к претензиям Ozon:
+    утраты без возмещения + недостачи при приёмке.
+    """
+    losses = con.execute("select * from mart_stock_losses order by claim_gap_rub desc").df()
+    accept = con.execute("select * from mart_supply_acceptance where status <> 'OK'").df()
+    recon = con.execute("select * from mart_recon_realization where status <> 'OK' order by month").df()
+    oos = con.execute("select * from mart_oos").df()
+
+    findings = []
+    gaps = losses[losses["claim_gap_rub"] > 1]
+    if len(gaps):
+        findings.append({"Тип": "Претензия к Ozon", "Что": "Утрата на складе Ozon без возмещения",
+                         "Где": f"{', '.join(sorted(set(gaps['clusters'])))}, {gaps['first_loss_date'].min():%d.%m}: "
+                                f"{len(gaps)} SKU, {int(gaps['lost_qty'].sum())} шт.",
+                         "rub": gaps["claim_gap_rub"].sum(),
+                         "Действие": "Запросить расчёт возмещения (лимит по формуле Ozon), претензия"})
+    for _, r in accept.iterrows():
+        findings.append({"Тип": "Претензия к Ozon", "Что": "Недостача при приёмке поставки",
+                         "Где": f"{r['supply_id']}, SKU {r['sku']}, {r['cluster']}",
+                         "rub": -r["diff_cost_rub"], "Действие": "Акт расхождений, претензия"})
+    for _, r in recon.iterrows():
+        findings.append({"Тип": "Сверка с отчётом", "Что": "Отчёт о реализации ≠ API", "Где": f"{r['month']}, SKU {r['sku']}",
+                         "rub": abs(r["diff_amount_sold"]) + abs(r["diff_amount_returned"]),
+                         "Действие": "Сверка по отправлениям, запрос в поддержку"})
+    for _, r in oos.iterrows():
+        findings.append({"Тип": "Упущенная выручка", "Что": "Упущенные продажи: карточка без остатка",
+                         "Где": f"{r['offer_id']} ({r['model_id']}), {r['oos_days']} дн.",
+                         "rub": r["lost_revenue_est"], "Действие": "Поставка на Ozon из остатка ФФ"})
+    fnd = pd.DataFrame(findings).sort_values("rub", ascending=False) if findings else pd.DataFrame()
+    claims_total = losses["claim_gap_rub"].clip(lower=0).sum() + (-accept["diff_cost_rub"]).sum()
+    return fnd, claims_total
+
+
 # ---------- сборка ----------
 def render_dashboard(con: duckdb.DuckDBPyConnection, params: dict, out_path: Path) -> Path:
     month = params["report"]["focus_month"]
@@ -182,14 +219,10 @@ def render_dashboard(con: duckdb.DuckDBPyConnection, params: dict, out_path: Pat
                                        f"баллов зачтено {rub(r['points_offset'])}, не использовано {rub(r['points_unused'])}"),
                            axis=1)
 
-    losses = con.execute("select * from mart_stock_losses order by claim_gap_rub desc").df()
-    accept = con.execute("select * from mart_supply_acceptance where status <> 'OK'").df()
-    recon = con.execute("select * from mart_recon_realization where status <> 'OK' order by month").df()
     ads = con.execute("select * from mart_recon_ads order by month").df()
     dq = con.execute("select * from mart_dq").df()
     purchase = con.execute("select * from mart_purchase_plan where action <> 'OK' order by excess_cost_rub desc").df()
     cards = con.execute("select * from mart_stock_plan where action <> 'OK'").df()
-    oos = con.execute("select * from mart_oos").df()
     scen = con.execute("select * from mart_scenarios order by sku").df()
     cl = con.execute("""
         select cluster, sum(qty) as qty, sum(ship_qty) as ship_qty from mart_cluster_supply group by cluster
@@ -198,27 +231,7 @@ def render_dashboard(con: duckdb.DuckDBPyConnection, params: dict, out_path: Pat
         select avg(is_local::int) as local_share from stg_postings
         where status <> 'cancelled' and strftime(created_date, '%Y-%m') = ?""", [month]).fetchone()[0]
 
-    # находки «где теряются деньги» — в рублях
-    findings = []
-    gaps = losses[losses["claim_gap_rub"] > 1]
-    if len(gaps):
-        findings.append({"Что": "Утрата на складе Ozon без возмещения",
-                         "Где": f"{', '.join(sorted(set(gaps['clusters'])))}, {gaps['first_loss_date'].min():%d.%m}: "
-                                f"{len(gaps)} SKU, {int(gaps['lost_qty'].sum())} шт.",
-                         "rub": gaps["claim_gap_rub"].sum(),
-                         "Действие": "Запросить расчёт возмещения (лимит по формуле Ozon), претензия"})
-    for _, r in accept.iterrows():
-        findings.append({"Что": "Недостача при приёмке поставки", "Где": f"{r['supply_id']}, SKU {r['sku']}, {r['cluster']}",
-                         "rub": -r["diff_cost_rub"], "Действие": "Акт расхождений, претензия"})
-    for _, r in recon.iterrows():
-        findings.append({"Что": "Отчёт о реализации ≠ API", "Где": f"{r['month']}, SKU {r['sku']}",
-                         "rub": abs(r["diff_amount_sold"]) + abs(r["diff_amount_returned"]),
-                         "Действие": "Сверка по отправлениям, запрос в поддержку"})
-    for _, r in oos.iterrows():
-        findings.append({"Что": "Упущенные продажи: карточка без остатка", "Где": f"{r['offer_id']} ({r['model_id']}), {r['oos_days']} дн.",
-                         "rub": r["lost_revenue_est"], "Действие": "Поставка на Ozon из остатка ФФ"})
-    fnd = pd.DataFrame(findings).sort_values("rub", ascending=False) if findings else pd.DataFrame()
-    claims_total = losses["claim_gap_rub"].clip(lower=0).sum() + (-accept["diff_cost_rub"]).sum()
+    fnd, claims_total = money_findings(con)
 
     loss_skus = sku[sku["contribution"] < 0]
     worst = loss_skus.sort_values("contribution").head(2)

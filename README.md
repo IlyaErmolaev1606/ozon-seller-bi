@@ -9,6 +9,9 @@ Seller API до витрин, по которым собственник и фи
 
 ![Дашборд на синтетических данных](docs/img/dashboard.png)
 
+Тот же дашборд собирается в Yandex DataLens из выгрузки витрин в CSV — инструкция и проверочные
+цифры в [docs/08](docs/08_datalens.md).
+
 ## Пять идей, на которых всё держится
 
 1. **Номинальный тариф Ozon — не расход.** В 2026 году вознаграждение считается от цены продавца,
@@ -54,7 +57,8 @@ git clone https://github.com/IlyaErmolaev1606/ozon-seller-bi.git
 cd ozon-seller-bi
 make install      # или: pip install -r requirements-dev.txt
 make demo         # синтетические данные → витрины DuckDB → dashboard/index.html
-make test         # 32 теста: расчёты, разбор API, сверки
+make datalens     # витрины → datalens/*.csv для подключения «Файлы» в DataLens
+make test         # 37 тестов: расчёты, разбор API, сверки, выгрузка для DataLens
 ```
 
 На своих данных:
@@ -87,10 +91,12 @@ src/osbi/
   unit_economics.py  ценовой калькулятор, акции, сценарии тарифов (с механикой баллов)
   forecast.py        спрос с поправкой на OOS, закупка по модели, поставки по кластерам, ABC/XYZ
   dashboard.py       статичный дашборд (прототип того, что живёт в DataLens)
+  export_datalens.py выгрузка витрин в CSV для DataLens: формат загрузчика, сходимость цифр
   demo_data.py       генератор синтетических данных с заложенными ситуациями
 sql/staging, sql/marts   вся бизнес-логика расчётов — в SQL
 config/params.toml       налоги, допуски сверок, параметры планирования
 data/reference/          справочник SKU и маппинг статей начислений
+datalens/                витрины в CSV, готовые к загрузке в DataLens
 docs/                    подход, архитектура, формулы, сверки, планирование, API-2026, план 30/60/90
 ```
 
@@ -103,6 +109,7 @@ docs/                    подход, архитектура, формулы, �
 5. [Спрос, закупки, поставки по кластерам](docs/05_planning.md)
 6. [Seller API и правила Ozon в 2026 году](docs/06_ozon_api_notes_2026.md)
 7. [План 30/60/90 и подводные камни](docs/07_plan_and_risks.md)
+8. [Дашборд в Yandex DataLens](docs/08_datalens.md)
 
 ## Честно о допущениях
 
